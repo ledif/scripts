@@ -1,0 +1,85 @@
+#!/bin/bash
+# convert ris format to bibtex format
+# usage:
+#          ris2bib.sh ris-file(s)
+#          www.scriptdemp.blogspot.ca
+
+getCTag()
+{
+   for cTag in $*
+   do
+      nl=`grep "^${cTag}" ${ris} | wc -l`
+      [ ${nl} -ne 0 ] && echo "${cTag}" && exit
+   done
+   echo ""
+}
+
+[ $# -eq 0 ] && sed -n '2,5p' `which ris2bib.sh` && exit
+
+for ris in $*
+do
+    if [ -e ${ris} ]; then
+       dos2unix ${ris}
+       auTag=`getCTag AU A1 A2`
+       tlTag=`getCTag T1 TI`
+       joTag=`getCTag JO JA`
+       yrTag=`getCTag PY Y1`
+       doTag=`getCTag M3 DO`
+
+       voTag="VL"; spTag="SP"; epTag="EP"; urTag="UR"; isTag="IS"
+       publisher=`grep "^PB\ " ${ris} | awk -F\- '{print $2}' | sed -e 's/^\ //g'`
+
+       authorList0=`grep "^${auTag}\ " ${ris} | awk -F\- '{print $2"@"}'`
+       authorList=`echo ${authorList0} | sed -e 's/^\ //g' -e 's/\.\ /\./g' -e "s/\@$//" | sed -e 's/@/\ and\ /g'`
+
+       titleStr=`grep "^${tlTag}\ " ${ris} | cut -c7-`
+       jourStr=`grep "^${joTag}\ " ${ris} | awk -F\- '{print $2}' | sed -e 's/^\ //g'`
+       volStr=`grep "^${voTag}\ " ${ris} | awk -F\- '{print $2}' | sed -e 's/\ //g'`
+       SPStr=`grep "^${spTag}\ " ${ris} | awk -F\- '{print $2}' | sed -e 's/\ //g'`
+       EPStr=`grep "^${epTag}\ " ${ris} | awk -F\- '{print $2}' | sed -e 's/\ //g'`
+       if [ ${#EPStr} -ne 0 ]; then
+          pageStr="${SPStr}--${EPStr}"
+       else
+          pageStr=${SPStr}
+       fi
+       if [ ${#isTag} -ne 0 ]; then
+          isnStr=`grep "^${isTag}\ " ${ris} | cut -c7-`
+       fi
+       yearStr=`grep "^${yrTag}\ " ${ris} | awk -F\- '{print $2}' | sed -e 's/\ //g' | cut -c-4`
+       if [ ${#doTag} -ne 0 ]; then
+          doiStr=`grep "^${doTag}\ " ${ris} | awk -F\- '{print $2}' | rev | awk -F\: '{print $1}' | rev | sed -e 's/^\ //g'`
+       fi
+
+       if [ ${#urTag} -ne 0 ]; then
+          urlStr=`grep "^${urTag}\ " ${ris} | awk -F\- '{print $2}' | sed -e 's/^\ //g'`
+       fi
+
+       #generate the key
+       mykey=`echo ${authorList} | awk -F\, '{print $1}'`
+       mykey="${mykey}${yearStr}"
+       titleKey=`echo ${titleStr} | awk '{print $1""$2}'`
+       mykey=`echo "${mykey}${titleKey}" | awk '{print tolower($0)}' | sed -e 's/\-//g'`
+       echo ""
+       echo @article{"${mykey},"
+       echo " author={${authorList}},"
+       echo " title = {{${titleStr}}},"
+       echo " journal = {${jourStr}},"
+       echo " year = {${yearStr}},"
+       echo " volume = {${volStr}},"
+       [ ${#isnStr} -ne 0 ] && echo " number = {"${isnStr}"},"
+       [ ${#doiStr} -ne 0 ] && echo " doi = {"${doiStr}"},"
+       [ ${#urlStr} -ne 0 ] && echo " url = {${urlStr}},"
+       if [ ${#publisher} -eq 0 ]; then
+          echo " pages = {${pageStr}}"
+       else
+          echo " pages = {${pageStr}},"
+          echo " publisher = {${publisher}}"
+       fi
+       echo " }"
+       unset auTag tlTag joTag voTag spTag epTag isTag 
+   else
+      echo ""
+      echo "${ris} is not found!"
+      echo ""
+   fi
+done

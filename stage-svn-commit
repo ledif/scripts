@@ -1,0 +1,21 @@
+#!/bin/bash
+
+tmp0=$(cat /dev/urandom  | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+tmp1=$(cat /dev/urandom  | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+
+tmp_dir=/tmp/stage-$tmp0
+diff_file=/tmp/${tmp1}.diff
+
+branch=$(git rev-parse --abbrev-ref HEAD)
+echo "Creating patch for the following"
+git diff --name-only master..$branch
+
+git diff --no-prefix master..$branch | filterdiff -x .gitignore -x "*check_formatting.pl" > $diff_file
+
+echo "Checking out a fresh SVN copy to $tmp_dir"
+svn co -q $STAPL_SVN $tmp_dir
+
+echo "Applying patch"
+cd $tmp_dir && patch -p0 < $diff_file
+
+echo "Staged directory located at $tmp_dir"
