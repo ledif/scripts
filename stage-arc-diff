@@ -1,0 +1,22 @@
+#!/bin/bash
+
+branch=$(git rev-parse --short HEAD)
+
+tmp_dir=/tmp/stage-$branch
+diff_file=/tmp/${branch}.diff
+
+echo "Creating patch for the following"
+git --no-pager diff --name-only master..$branch
+
+git diff --patience --no-prefix master..$branch | filterdiff -x .gitignore -x "*check_formatting.pl" -x "*.gitkeep" > $diff_file
+
+echo "Checking out a fresh SVN copy to $tmp_dir"
+svn co -q $STAPL_SVN $tmp_dir
+
+echo '{"phabricator.uri" : "http://delft.cse.tamu.edu/","repository.callsign": "STAPL"}' >> $tmp_dir/.arcconfig
+
+echo "Applying patch"
+cd $tmp_dir && patch -p0 < $diff_file
+
+echo "Staged directory located at $tmp_dir"
+

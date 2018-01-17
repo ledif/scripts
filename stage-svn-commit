@@ -8,9 +8,9 @@ diff_file=/tmp/${tmp1}.diff
 
 branch=$(git rev-parse --abbrev-ref HEAD)
 echo "Creating patch for the following"
-git diff --name-only master..$branch
+git --no-pager diff --name-only master..$branch
 
-git diff --no-prefix master..$branch | filterdiff -x .gitignore -x "*check_formatting.pl" > $diff_file
+git diff --no-prefix master..$branch | filterdiff -x .gitignore -x "*.gitkeep" -x "*check_formatting.pl" > $diff_file
 
 echo "Checking out a fresh SVN copy to $tmp_dir"
 svn co -q $STAPL_SVN $tmp_dir

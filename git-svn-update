@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# This script updates the git repo based on changes from SVN
+# and merges it into the dev branch.
+
+if [ ! -z "$(git status -uno --porcelain)" ]
+then
+  echo "There are uncommitted changes. Please merge all changes before continuing."
+  exit 1
+fi
+
+# Get SVN changes and record the last SVN revision
+git checkout master
+git svn rebase
+
+last_svn_revision=$(git show --format="%b" -s HEAD | grep "trunk" | sed 's/.*trunk@//' | cut -d" " -f 1)
+
+# Merge SVN (master) into dev
+git checkout dev
+git merge master --edit -m "Updating to SVN r${last_svn_revision}."
